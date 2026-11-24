@@ -59,8 +59,16 @@ public final class SmartHomeMcpHandler {
                 "description", "Desired light state")));
     session.toolCall(setLight, tools::handleSetLight);
 
-    // TODO (Story 6): register "get_light_status" (input: room) -> a status handler
-    //  that reports the latest state the simulator published, or says none was seen yet.
+    Tool getLightStatus = createTool(
+        "get_light_status",
+        "Get the last light state (ON/OFF) the smart home simulator reported for a room. "
+            + "Use after set_light to confirm the change actually happened.",
+        Map.of(
+            "room", Map.of(
+                "type", "string",
+                "enum", List.copyOf(Topics.ROOMS),
+                "description", "Room id")));
+    session.toolCall(getLightStatus, tools::handleGetLightStatus);
   }
 
   private static Tool createTool(String name, String description, Map<String, Object> properties) {

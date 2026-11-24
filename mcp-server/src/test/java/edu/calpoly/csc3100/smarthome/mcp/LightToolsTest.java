@@ -18,8 +18,9 @@ class LightToolsTest {
   private record Sent(String topic, String payload) { }
 
   private final List<Sent> sent = new ArrayList<>();
-  private final LightTools tools =
-      new LightTools(new Topics("smarthome"), (topic, payload) -> sent.add(new Sent(topic, payload)));
+  private final LightStatusStore statuses = new LightStatusStore();
+  private final LightTools tools = new LightTools(
+      new Topics("smarthome"), (topic, payload) -> sent.add(new Sent(topic, payload)), statuses);
 
   @Test
   void validCommandPublishesOneMessageToTheRoomTopic() {
@@ -46,5 +47,25 @@ class LightToolsTest {
     assertThrows(IllegalArgumentException.class, () -> tools.setLight("livingroom", "DIM"));
     assertThrows(IllegalArgumentException.class, () -> tools.setLight("livingroom", 1));
     assertTrue(sent.isEmpty());
+  }
+
+  // ---- Story 6: get_light_status ----
+
+    @Test
+  void statusReportsTheSimulatorsLastState() {
+    statuses.update("kitchen", "OFF");            
+    assertTrue(tools.getLightStatus("kitchen").contains("OFF"));
+  }
+
+  @Test
+  void statusSaysSoWhenNothingWasReported() {
+    String answer = tools.getLightStatus("bedroom");   // nothing reported for bedroom
+    assertTrue(answer.contains("No status"));
+    assertFalse(answer.contains("ON") || answer.contains("OFF"));  // must not guess
+  }
+
+  @Test
+  void statusRejectsUnknownRoom() {
+    assertThrows(IllegalArgumentException.class, () -> tools.getLightStatus("garage"));
   }
 }
