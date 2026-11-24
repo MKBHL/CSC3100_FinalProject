@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+
 /**
  * The work behind each MCP tool. The handle* methods adapt MCP requests; the plain methods
  * hold the logic so JUnit can test them without an MCP client or a broker.
@@ -42,27 +43,32 @@ public final class LightTools {
     String validRoom = room(room);
     String validState = state(state);
     publisher.publish(topics.lightSet(validRoom), "{\"state\":\"" + validState + "\"}");
-    throw new UnsupportedOperationException("Sent ON to the livingroom light.");
+    return "Sent " + validState + " to the " + validRoom + " light.";
   }
 
   /** Accepts "LivingRoom", " livingroom " etc.; returns the lowercase room id. */
   static String room(Object value) {
-    if (!(value instanceof String)) {
-      throw new IllegalArgumentException("Room must be a string.");
-    }
-    value = ((String) value).trim().toLowerCase();
+    if (!(value instanceof String s)) throw new IllegalArgumentException("Room must be text.");
+    
+    String room = s.trim().toLowerCase(java.util.Locale.ROOT);
 
-    if (!Topics.ROOMS.contains(value)) {
-      throw new IllegalArgumentException("Invalid room: " + value);
+    if (!Topics.ROOMS.contains(room)) {
+      throw new IllegalArgumentException("Invalid room: " + room + ". Valid rooms: " + Topics.ROOMS);
     }
-    return (String) value;
-    throw new UnsupportedOperationException("TODO: room");
+    return room;
   }
 
   /** Accepts "on", "Off" etc.; returns "ON" or "OFF". */
   static String state(Object value) {
-    // TODO (Story 5): String, trim + toUpperCase, must be ON or OFF, else IllegalArgumentException
-    throw new UnsupportedOperationException("TODO: state");
+     if (!(value instanceof String s)) {
+      throw new IllegalArgumentException("State must be ON or OFF.");
+    }
+    String state = s.trim().toUpperCase(java.util.Locale.ROOT);
+    
+    if (!state.equals("ON") && !state.equals("OFF")) {
+      throw new IllegalArgumentException("State must be ON or OFF, Invalid state: " + state);
+    }
+    return state;
   }
 
   private static CallToolResult result(String message, boolean isError) {

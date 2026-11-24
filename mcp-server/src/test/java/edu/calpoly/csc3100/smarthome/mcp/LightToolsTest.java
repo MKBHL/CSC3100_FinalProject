@@ -23,26 +23,28 @@ class LightToolsTest {
 
   @Test
   void validCommandPublishesOneMessageToTheRoomTopic() {
-    // TODO: tools.setLight("livingroom", "ON");
-    // TODO: assert exactly one message was sent, with
-    //       topic   "smarthome/livingroom/light/set"
-    //       payload {"state":"ON"}
+    tools.setLight("livingroom", "ON");
+    assertEquals(
+      List.of(new Sent("smarthome/livingroom/light/set", "{\"state\":\"ON\"}")), sent);
   }
 
   @Test
   void inputIsNormalized() {
-    // TODO: tools.setLight(" LivingRoom ", "off") should publish {"state":"OFF"}
-    //       to smarthome/livingroom/light/set
+    tools.setLight(" LivingRoom ", "off");
+    assertEquals(
+      List.of(new Sent("smarthome/livingroom/light/set", "{\"state\":\"OFF\"}")), sent);
   }
 
   @Test
   void unknownRoomIsRejectedAndNothingIsPublished() {
-    // TODO: assertThrows(IllegalArgumentException.class, () -> tools.setLight("garage", "ON"));
-    // TODO: assert sent is empty
+    assertThrows(IllegalArgumentException.class, () -> tools.setLight("garage", "ON"));
+    assertTrue(sent.isEmpty());
   }
 
   @Test
   void invalidStateIsRejectedAndNothingIsPublished() {
-    // TODO: try "DIM" and a non-String such as 1; both throw, sent stays empty
+    assertThrows(IllegalArgumentException.class, () -> tools.setLight("livingroom", "DIM"));
+    assertThrows(IllegalArgumentException.class, () -> tools.setLight("livingroom", 1));
+    assertTrue(sent.isEmpty());
   }
 }

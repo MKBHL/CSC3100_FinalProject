@@ -4,7 +4,9 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 /**
@@ -27,14 +29,17 @@ public final class MqttLightCommandPublisher implements LightCommandPublisher, A
 
   @Override
   public void publish(String topic, String payload) {
-    // TODO (Story 5):
-    //  1. Build an MqttMessage from payload's UTF-8 bytes.
-    //  2. QoS 1 (delivered at least once), NOT retained: a command is a one-time action,
-    //     and a retained "ON" would re-fire every time the simulator reconnects.
-    //  3. client.publish(topic, message)
-    //  4. Catch MqttException and rethrow as IllegalStateException("Could not reach the broker: ...")
-    //     so the MCP tool can report the failure to the AI instead of crashing.
-    throw new UnsupportedOperationException("TODO: publish " + topic);
+    MqttMessage message = new MqttMessage(payload.getBytes(StandardCharsets.UTF_8));
+
+    message.setQos(1);
+    message.setRetained(false);
+
+    try {
+      client.publish(topic, message);
+    } 
+    catch (MqttException e) {
+      throw new IllegalStateException("Could not reach the MQTT broker: " + e.getMessage(), e);
+    }
   }
 
   @Override
