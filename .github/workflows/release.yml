@@ -1,0 +1,49 @@
+name: Release
+
+# Pushing a tag such as v1.0 builds and tests every module, then creates a GitHub Release
+# with each module's runnable jar attached. Based on the course's mcp-paint release workflow.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write          # needed only here, to create the Release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Same build as CI: if any test fails, no Release is created.
+      - name: Build and test
+        run: mvn -B clean verify
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          shopt -s nullglob
+          jars=()
+          for jar in */target/*.jar; do
+            # The shade plugin keeps an "original-" jar without dependencies; skip it.
+            [[ "$(basename "$jar")" == original-* ]] && continue
+            jars+=("$jar")
+          done
+          if [ ${#jars[@]} -eq 0 ]; then
+            echo "No runnable jars were built."
+            exit 1
+          fi
+          printf 'Attaching %s\n' "${jars[@]}"
+          gh release create "$RELEASE_TAG" "${jars[@]}" --verify-tag --generate-notes
