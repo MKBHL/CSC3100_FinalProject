@@ -16,8 +16,12 @@ public final class McpServerMain {
     String broker = System.getenv().getOrDefault("MQTT_BROKER", "tcp://broker.hivemq.com:1883");
     String root = System.getenv().getOrDefault("TOPIC_ROOT", Topics.DEFAULT_ROOT);
 
+    Topics topics = new Topics(root);
+    LightStatusStore statuses = new LightStatusStore();
     MqttLightCommandPublisher publisher = new MqttLightCommandPublisher(broker);
-    LightTools tools = new LightTools(new Topics(root), publisher);
+    MqttStatusSubscriber subscriber =
+        new MqttStatusSubscriber(broker, topics, new LightStatusListener(topics, statuses));
+    LightTools tools = new LightTools(topics, publisher, statuses);
     var server = new SmartHomeMcpHandler(tools).run();
     System.err.println("smart-home MCP server ready (broker=" + broker + ", root=" + root + ")");
 
@@ -26,6 +30,7 @@ public final class McpServerMain {
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       server.close();
       try {
+        subscriber.close();
         publisher.close();
       } catch (Exception e) {
         System.err.println("MQTT close failed: " + e.getMessage());

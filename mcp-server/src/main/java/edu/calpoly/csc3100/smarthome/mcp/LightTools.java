@@ -8,6 +8,7 @@ import io.modelcontextprotocol.spec.McpSchema.TextContent;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 
 /**
@@ -20,10 +21,17 @@ import java.util.Objects;
 public final class LightTools {
   private final Topics topics;
   private final LightCommandPublisher publisher;
+  private final LightStatusStore statuses;
 
-  public LightTools(Topics topics, LightCommandPublisher publisher) {
+  public LightTools(Topics topics, LightCommandPublisher publisher, LightStatusStore statuses) {
     this.topics = Objects.requireNonNull(topics);
     this.publisher = Objects.requireNonNull(publisher);
+    this.statuses = Objects.requireNonNull(statuses);
+  }
+
+  /** Convenience for code that only sends commands (keeps the Story 5 tests unchanged). */
+  public LightTools(Topics topics, LightCommandPublisher publisher) {
+    this(topics, publisher, new LightStatusStore());
   }
 
   /** MCP entry point for set_light. Bad input becomes an error result, never an exception. */
@@ -44,6 +52,26 @@ public final class LightTools {
     String validState = state(state);
     publisher.publish(topics.lightSet(validRoom), "{\"state\":\"" + validState + "\"}");
     return "Sent " + validState + " to the " + validRoom + " light.";
+  }
+
+  /** MCP entry point for get_light_status. A room with no report yet is an answer, not an error. */
+  public CallToolResult handleGetLightStatus(McpSyncServerExchange exchange, CallToolRequest request) {
+    try {
+      return result(getLightStatus(request.arguments().get("room")), false);
+    } catch (IllegalArgumentException e) {
+      return result(e.getMessage(), true);
+    }
+  }
+
+  /** Reports the last state the simulator confirmed for a room (never a guessed value). */
+  String getLightStatus(Object room) {
+    String validRoom = room(room);
+    Optional<String> latestState = statuses.latest(validRoom);
+    
+    if (latestState.isPresent()) {
+      return "The " + validRoom + " light is " + latestState.get() + " (last reported by the simulator).";
+    }
+    return "No status has been reported for the " + validRoom + " light yet.";
   }
 
   /** Accepts "LivingRoom", " livingroom " etc.; returns the lowercase room id. */
