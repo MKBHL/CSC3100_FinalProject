@@ -1,0 +1,67 @@
+classDiagram
+    direction LR
+
+    class McpServerMain {
+        +main(String[] args)$
+    }
+    class SmartHomeMcpHandler {
+        -LightTools tools
+        +run() McpSyncServer
+        -registerTools(SingleSessionSyncSpecification session)
+        -createTool(String name, String description, Map properties)$ Tool
+    }
+    class LightTools {
+        -Topics topics
+        -LightCommandPublisher publisher
+        -LightStatusStore statuses
+        +handleSetLight(McpSyncServerExchange exchange, CallToolRequest request) CallToolResult
+        +handleGetLightStatus(McpSyncServerExchange exchange, CallToolRequest request) CallToolResult
+        ~setLight(Object room, Object state) String
+        ~getLightStatus(Object room) String
+        ~room(Object value)$ String
+        ~state(Object value)$ String
+    }
+    class LightCommandPublisher {
+        <<interface>>
+        +publish(String topic, String payload)
+    }
+    class MqttLightCommandPublisher {
+        -MqttClient client
+        +publish(String topic, String payload)
+        +close()
+    }
+    class MqttStatusSubscriber {
+        -MqttClient client
+        +close()
+    }
+    class LightStatusListener {
+        -Topics topics
+        -LightStatusStore store
+        +accept(String topic, String payload) boolean
+        ~stateFrom(String payload)$ String
+    }
+    class LightStatusStore {
+        -Map~String, String~ latest
+        +update(String room, String state)
+        +latest(String room) Optional~String~
+    }
+    class Topics {
+        +String DEFAULT_ROOT$
+        +Set~String~ ROOMS$
+        -String root
+        +lightSet(String room) String
+        +lightStatus(String room) String
+        +allLightStatus() String
+    }
+
+    McpServerMain ..> SmartHomeMcpHandler : creates
+    McpServerMain ..> MqttLightCommandPublisher : creates
+    McpServerMain ..> MqttStatusSubscriber : creates
+    SmartHomeMcpHandler --> LightTools : tool handlers
+    LightTools --> LightCommandPublisher : sends commands
+    LightTools --> LightStatusStore : reads status
+    LightTools --> Topics
+    MqttLightCommandPublisher ..|> LightCommandPublisher
+    MqttStatusSubscriber ..> LightStatusListener : forwards each message
+    LightStatusListener --> LightStatusStore : writes status
+    LightStatusListener --> Topics
